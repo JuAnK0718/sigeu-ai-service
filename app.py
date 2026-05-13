@@ -32,7 +32,7 @@ def analizar_imagen():
         image = Image.open(BytesIO(image_data))
 
         # Usar el modelo específico
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        model = genai.GenerativeModel('gemini-pro-vision')
         
         # El prompt para la emergencia
         prompt = "Describe brevemente esta emergencia en máximo 3 líneas indicando si es necesaria POLICIA, BOMBEROS u HOSPITAL."
