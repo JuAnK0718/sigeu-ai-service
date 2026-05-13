@@ -7,10 +7,9 @@ from flask_cors import CORS
 import google.generativeai as genai
 
 app = Flask(__name__)
-# Configuración de CORS ultra permisiva para evitar bloqueos
+# Configuración CORS
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Cargar API Key
 api_key = os.getenv('GOOGLE_API_KEY')
 if api_key:
     genai.configure(api_key=api_key)
@@ -24,17 +23,29 @@ def analizar_imagen():
         if not base64_image:
             return jsonify({"error": "No se envió ninguna imagen"}), 400
 
-        # Limpiar base64
+        # Limpiar la imagen
         if ',' in base64_image:
             base64_image = base64_image.split(',')[1]
 
         image_data = base64.b64decode(base64_image)
         image = Image.open(BytesIO(image_data))
 
-        # Usar el modelo específico
-        model = genai.GenerativeModel('gemini-pro-vision')
+        # 🚀 CÓDIGO CAZADOR DE MODELOS
+        print("--- Buscando modelos disponibles en tu API Key ---")
+        modelo_elegido = 'gemini-1.5-flash' # Modelo por defecto
         
-        # El prompt para la emergencia
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                print(f"Modelo detectado: {m.name}")
+                # Buscamos dinámicamente uno que sirva para imágenes
+                if 'flash' in m.name:
+                    modelo_elegido = m.name
+                    break
+                    
+        print(f"--- ¡Usando el modelo: {modelo_elegido}! ---")
+
+        # Iniciar la IA con el modelo seguro
+        model = genai.GenerativeModel(modelo_elegido)
         prompt = "Describe brevemente esta emergencia en máximo 3 líneas indicando si es necesaria POLICIA, BOMBEROS u HOSPITAL."
         
         response = model.generate_content([prompt, image])
