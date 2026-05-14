@@ -7,7 +7,7 @@ from flask_cors import CORS
 import google.generativeai as genai
 
 app = Flask(__name__)
-# Configuración CORS ultra permisiva
+# Configuración CORS
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 api_key = os.getenv('GOOGLE_API_KEY')
@@ -23,46 +23,37 @@ def analizar_imagen():
         if not base64_image:
             return jsonify({"error": "No se envió ninguna imagen"}), 400
 
+        # Limpiar la imagen
         if ',' in base64_image:
             base64_image = base64_image.split(',')[1]
 
         image_data = base64.b64decode(base64_image)
         image = Image.open(BytesIO(image_data))
+
+        # 🚀 CÓDIGO CAZADOR DE MODELOS
+        print("--- Buscando modelos disponibles en tu API Key ---")
+        modelo_elegido = 'gemini-1.5-flash' # Modelo por defecto
         
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                print(f"Modelo detectado: {m.name}")
+                # Buscamos dinámicamente uno que sirva para imágenes
+                if 'flash' in m.name:
+                    modelo_elegido = m.name
+                    break
+                    
+        print(f"--- ¡Usando el modelo: {modelo_elegido}! ---")
+
+        # Iniciar la IA con el modelo seguro
+        model = genai.GenerativeModel(modelo_elegido)
         prompt = "Describe brevemente esta emergencia en máximo 3 líneas indicando si es necesaria POLICIA, BOMBEROS u HOSPITAL."
         
-        # 🔥 LÓGICA BLINDADA: Lista de supervivencia
-        # Dejamos el gemini-2.5-flash al puro final como último recurso.
-        modelos_a_probar = [
-            'gemini-2.0-flash',       # Nueva versión, muchísima cuota gratis
-            'gemini-1.5-flash-8b',    # Versión súper ligera, casi imposible de agotar
-            'gemini-1.5-pro',         # Versión inteligente antigua
-            'gemini-2.5-flash'        # El que sabemos que te funciona pero solo da 20 intentos
-        ]
+        response = model.generate_content([prompt, image])
         
-        ultimo_error = ""
-        
-        for nombre_modelo in modelos_a_probar:
-            try:
-                print(f"Probando suerte con: {nombre_modelo}...")
-                model = genai.GenerativeModel(nombre_modelo)
-                response = model.generate_content([prompt, image])
-                
-                print(f"¡ÉXITO! Nos respondió el modelo: {nombre_modelo}")
-                return jsonify({"descripcion": response.text})
-                
-            except Exception as e:
-                # Si falla (por cuota o porque no existe), guardamos el error y el ciclo sigue
-                ultimo_error = str(e)
-                print(f"Falló {nombre_modelo} - Motivo: {ultimo_error[:60]}... ¡Pasando al siguiente!")
-                continue 
-                
-        # Si el ciclo termina y TODOS los modelos de la lista fallaron
-        print("Emergencia: Todos los modelos de Google rechazaron la foto.")
-        return jsonify({"error": f"Límites de Google o modelos no encontrados. Último error: {ultimo_error}"}), 500
+        return jsonify({"descripcion": response.text})
 
     except Exception as e:
-        print(f"Error CRÍTICO de código: {str(e)}")
+        print(f"Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
