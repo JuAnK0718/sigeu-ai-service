@@ -30,7 +30,7 @@ def analizar_imagen():
         image_data = base64.b64decode(base64_image)
         image = Image.open(BytesIO(image_data))
 
-        # 🚀 CÓDIGO CAZADOR DE MODELOS
+        
         print("--- Buscando modelos disponibles en tu API Key ---")
         modelo_elegido = 'gemini-1.5-flash' # Modelo por defecto
         
