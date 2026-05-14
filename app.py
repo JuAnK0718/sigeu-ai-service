@@ -10,7 +10,6 @@ app = Flask(__name__)
 # Configuración CORS ultra permisiva
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Cargar API Key de forma segura
 api_key = os.getenv('GOOGLE_API_KEY')
 if api_key:
     genai.configure(api_key=api_key)
@@ -29,40 +28,41 @@ def analizar_imagen():
 
         image_data = base64.b64decode(base64_image)
         image = Image.open(BytesIO(image_data))
-
-        # 🚀 LÓGICA ROBUSTA CON PLAN B
+        
         prompt = "Describe brevemente esta emergencia en máximo 3 líneas indicando si es necesaria POLICIA, BOMBEROS u HOSPITAL."
         
-        try:
-            # INTENTO 1: Usamos la versión estable y de alta cuota (gemini-1.5-flash-latest)
-            modelo_primario = 'gemini-1.5-flash-latest'
-            print(f"--- Intentando con modelo primario: {modelo_primario} ---")
-            model = genai.GenerativeModel(modelo_primario)
-            response = model.generate_content([prompt, image])
-            
-            return jsonify({"descripcion": response.text})
-            
-        except Exception as e_primario:
-            # Si el primario falla (404, 429, etc.), usamos el PLAN B automáticamente
-            error_string = str(e_primario)
-            print(f"--- Falla en primario: {error_string}. Activando PLAN B ---")
-            
-            # PLAN B: Usamos gemini-pro que es multimodal y muy compatible
-            # (Aunque tiene cuota menor, es mejor que un error 404)
-            modelo_backup = 'gemini-pro' 
-            model = genai.GenerativeModel(modelo_backup)
-            
-            # Nota: gemini-pro a veces requiere una estructura distinta para imágenes
-            # dependiendo de la versión del SDK, pero generate_content suele ser compatible.
-            response = model.generate_content([prompt, image])
-            
-            return jsonify({
-                "descripcion": response.text,
-                "nota": "Se usó modelo de respaldo por inestabilidad de Google API."
-            })
+        # 🔥 LÓGICA BLINDADA: Lista de supervivencia
+        # Dejamos el gemini-2.5-flash al puro final como último recurso.
+        modelos_a_probar = [
+            'gemini-2.0-flash',       # Nueva versión, muchísima cuota gratis
+            'gemini-1.5-flash-8b',    # Versión súper ligera, casi imposible de agotar
+            'gemini-1.5-pro',         # Versión inteligente antigua
+            'gemini-2.5-flash'        # El que sabemos que te funciona pero solo da 20 intentos
+        ]
+        
+        ultimo_error = ""
+        
+        for nombre_modelo in modelos_a_probar:
+            try:
+                print(f"Probando suerte con: {nombre_modelo}...")
+                model = genai.GenerativeModel(nombre_modelo)
+                response = model.generate_content([prompt, image])
+                
+                print(f"¡ÉXITO! Nos respondió el modelo: {nombre_modelo}")
+                return jsonify({"descripcion": response.text})
+                
+            except Exception as e:
+                # Si falla (por cuota o porque no existe), guardamos el error y el ciclo sigue
+                ultimo_error = str(e)
+                print(f"Falló {nombre_modelo} - Motivo: {ultimo_error[:60]}... ¡Pasando al siguiente!")
+                continue 
+                
+        # Si el ciclo termina y TODOS los modelos de la lista fallaron
+        print("Emergencia: Todos los modelos de Google rechazaron la foto.")
+        return jsonify({"error": f"Límites de Google o modelos no encontrados. Último error: {ultimo_error}"}), 500
 
     except Exception as e:
-        print(f"Error CRÍTICO Final: {str(e)}")
+        print(f"Error CRÍTICO de código: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
