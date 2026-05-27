@@ -14,10 +14,36 @@ api_key = os.getenv('GOOGLE_API_KEY')
 if api_key:
     genai.configure(api_key=api_key)
 
+PROMPT_ANALISIS_EMERGENCIA = """
+Analiza la imagen como apoyo operativo para SIGEU.
+Responde en español claro, maximo 6 lineas, sin Markdown, sin asteriscos y sin adornos.
+Incluye estos puntos cuando se puedan inferir visualmente:
+Escena: describe que ocurre.
+Riesgos: menciona posibles heridos, personas atrapadas, fuego, humo, via bloqueada, daño estructural o riesgo para peatones/vehiculos.
+Gravedad: Baja, Media, Alta o Critica, con una razon breve.
+Entidades: escribe exactamente POLICIA, BOMBEROS, HOSPITAL o NINGUNA EMERGENCIA segun corresponda.
+Recursos sugeridos: indica cantidades aproximadas solo si hay señales claras; si no es claro, usa "posibles" o "por confirmar".
+No inventes datos invisibles: si algo no se ve con certeza, dilo como posible.
+"""
+
+def limpiar_descripcion_ia(texto):
+    texto = (texto or '').strip()
+    if not texto:
+        return "Escena: La imagen no permite identificar con claridad la emergencia.\nRiesgos: Por confirmar.\nGravedad: Media.\nEntidades: POLICIA."
+
+    lineas = []
+    for linea in texto.splitlines():
+        limpia = linea.strip().lstrip('-•* ').strip()
+        if limpia:
+            lineas.append(limpia)
+
+    descripcion = '\n'.join(lineas[:8]).strip()
+    return descripcion[:1200]
+
 @app.route('/analizar', methods=['POST'])
 def analizar_imagen():
     try:
-        data = request.json
+        data = request.get_json(silent=True) or {}
         base64_image = data.get('imagen')
         
         if not base64_image:
@@ -46,11 +72,11 @@ def analizar_imagen():
 
         # Iniciar la IA con el modelo seguro
         model = genai.GenerativeModel(modelo_elegido)
-        prompt = "Describe brevemente esta emergencia en máximo 3 líneas indicando si es necesaria POLICIA, BOMBEROS u HOSPITAL."
         
-        response = model.generate_content([prompt, image])
+        response = model.generate_content([PROMPT_ANALISIS_EMERGENCIA, image])
+        descripcion = limpiar_descripcion_ia(response.text)
         
-        return jsonify({"descripcion": response.text})
+        return jsonify({"descripcion": descripcion})
 
     except Exception as e:
         print(f"Error: {str(e)}")
