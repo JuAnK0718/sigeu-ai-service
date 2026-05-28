@@ -13,7 +13,6 @@ El objetivo del servicio es complementar el reporte ciudadano con una interpreta
 El servicio esta separado del backend principal de SIGEU. Esta separacion permite que el analisis de imagenes funcione como un modulo independiente, manteniendo desacopladas la inteligencia artificial, la gestion de datos y la interfaz de usuario.
 
 Flujo general:
-
 1. El ciudadano adjunta una imagen desde el frontend.
 2. El frontend convierte la imagen a base64.
 3. La imagen se envia al endpoint `/analizar`.
@@ -32,25 +31,6 @@ Flujo general:
 - Gunicorn
 - Railway para despliegue
 
-# SIGEU AI Service
-
-Microservicio de inteligencia artificial para clasificación de emergencias urbanas.
-
-## Tecnologías
-- Python
-- FastAPI
-
-## Instalación
-
-pip install -r requirements.txt
-
-## Ejecutar
-
-uvicorn main:app --reload
-
-## Endpoints
-- POST /classify - Clasifica el tipo de emergencia (policía, ambulancia, bomberos)
-- GET /health - Estado del servicio
 ## Endpoint principal
 
 ### Analizar imagen
@@ -58,7 +38,6 @@ uvicorn main:app --reload
 `POST /analizar`
 
 Solicitud:
-
 ```json
 {
   "imagen": "data:image/jpeg;base64,..."
@@ -68,7 +47,6 @@ Solicitud:
 La imagen tambien puede enviarse como cadena base64 sin encabezado `data:image`.
 
 Respuesta exitosa:
-
 ```json
 {
   "descripcion": "Escena: ...\nRiesgos: ...\nGravedad: ...\nEntidades: ..."
@@ -76,7 +54,6 @@ Respuesta exitosa:
 ```
 
 Respuesta de error:
-
 ```json
 {
   "error": "No se envio ninguna imagen"
@@ -97,8 +74,6 @@ El servicio evita inventar informacion no visible y expresa como posible aquello
 
 ## Variables de entorno
 
-Configuracion principal:
-
 ```env
 GOOGLE_API_KEY=your-google-api-key
 PORT=8080
@@ -109,20 +84,3 @@ PORT=8080
 ## Despliegue
 
 El servicio esta preparado para ejecutarse con Gunicorn:
-
-```text
-web: gunicorn --bind 0.0.0.0:$PORT --timeout 120 app:app
-```
-
-Railway proporciona la variable `PORT` durante el despliegue. El frontend consume el servicio mediante la variable `VITE_AI_SERVICE_URL`.
-
-## Integracion con SIGEU
-
-Este servicio no registra reportes ni accede directamente a la base de datos. Su responsabilidad se limita al analisis de imagenes. La persistencia de reportes, usuarios, estados y recursos se mantiene en el backend principal de SIGEU.
-
-## Consideraciones tecnicas
-
-- El analisis de IA se utiliza como apoyo operativo, no como decision definitiva.
-- La descripcion generada se limita en longitud antes de enviarse al frontend.
-- El servicio limpia caracteres de formato innecesarios para devolver una respuesta clara.
-- Si la imagen no permite identificar una emergencia con claridad, se devuelve una respuesta de respaldo.
