@@ -32,6 +32,25 @@ Flujo general:
 - Gunicorn
 - Railway para despliegue
 
+# SIGEU AI Service
+
+Microservicio de inteligencia artificial para clasificación de emergencias urbanas.
+
+## Tecnologías
+- Python
+- FastAPI
+
+## Instalación
+
+pip install -r requirements.txt
+
+## Ejecutar
+
+uvicorn main:app --reload
+
+## Endpoints
+- POST /classify - Clasifica el tipo de emergencia (policía, ambulancia, bomberos)
+- GET /health - Estado del servicio
 ## Endpoint principal
 
 ### Analizar imagen
